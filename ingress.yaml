@@ -1,0 +1,89 @@
+#
+#  Author: Hari Sekhon
+#  Date: [% DATE  # 2019-11-28 12:59:41 +0000 (Thu, 28 Nov 2019) %]
+#
+#  vim:ts=2:sts=2:sw=2:et
+#  lint: k8s
+#
+#  https://github.com/HariSekhon/Kubernetes-configs
+#
+#  License: see accompanying Hari Sekhon LICENSE file
+#
+#  If you're using my code you're welcome to connect with me on LinkedIn
+#  and optionally send me feedback to help improve or steer this or other code I publish
+#
+#  https://www.linkedin.com/in/HariSekhon
+#
+
+# ============================================================================ #
+#                                 I n g r e s s
+# ============================================================================ #
+
+# https://kubernetes.io/docs/concepts/services-networking/ingress/
+
+# https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/
+
+---
+#apiVersion: extensions/v1beta1  # old
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  # XXX: Edit
+  name: APP
+  namespace: NAMESPACE
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+
+    kubernetes.io/ingress.class: nginx
+    #kubernetes.io/ingress.class: traefik  # see k8s_traefik.yaml to set up this ingress controller
+
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+    # rewrite /APP to just /
+    nginx.ingress.kubernetes.io/rewrite-target: /
+
+    # XXX: Edit to make available externally or apply common ingress.nginx.patch.yaml with shared IP list eg. Cloudflare
+    nginx.ingress.kubernetes.io/whitelist-source-range: |
+      10.0.0.0/8,
+      172.16.0.0/16,
+      192.168.0.0/16
+
+    # https://kubernetes.github.io/ingress-nginx/examples/affinity/cookie/
+    #nginx.ingress.kubernetes.io/affinity: cookie
+    #nginx.ingress.kubernetes.io/session-cookie-name: MYCOOKIE  # default: INGRESSCOOKIE
+    #nginx.ingress.kubernetes.io/affinity-mode: persistent  # default: "balanced" - rebalances to new pods
+    #nginx.ingress.kubernetes.io/canary: "true"
+    #nginx.ingress.kubernetes.io/canary-weight: 1  # 1%
+
+    # https://aws.amazon.com/premiumsupport/knowledge-center/eks-configure-nginx-ingress-controller/
+    #
+    # nginx.ingress.kubernetes.io/proxy-body-size: 8m
+    # nginx.ingress.kubernetes.io/enable-cors: "true"
+    # nginx.ingress.kubernetes.io/cors-allow-headers: "X-Forwarded-For"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+spec:
+  tls:
+    # XXX: Edit
+    - hosts:
+        - APP.DOMAIN.COM
+      # SSL cert auto-generated for this FQDN by Cert Manager ACME integration (see cert-manager.yaml) and saved to this secret name
+      secretName: APP-tls
+  rules:
+    # XXX: Edit
+    - host: APP.DOMAIN.COM
+      http:
+        paths:
+          # XXX: Edit
+          #- path: /APP
+          - path: /
+            pathType: Prefix  # for new networking.k8s.io/v1
+            backend:
+              #serviceName: APP-svc  # Old, for extensions/v1beta1
+              #servicePort: 80
+              service:
+                name: APP-svc  # XXX: Edit
+                port:
+                  number: 80
+                  # or
+                  #name: http
